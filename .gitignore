@@ -217,3 +217,9 @@ jsconfig.json
 example/yarn.lock
 example/package-lock.json
 /package-lock.json
+android/.project
+android/.settings
+example/android/.project
+example/android/.settings
+old-example-redux/android/.project
+old-example-redux/android/.settings

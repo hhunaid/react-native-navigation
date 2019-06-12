@@ -1,15 +1,21 @@
 package com.reactnativenavigation.views;
 
+import android.graphics.Color;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v7.widget.ActionMenuView;
+import android.support.v7.widget.SearchView;
 import android.text.SpannableStringBuilder;
 import android.text.TextUtils;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.facebook.react.bridge.WritableMap;
+import com.facebook.react.bridge.WritableNativeMap;
 import com.reactnativenavigation.NavigationApplication;
 import com.reactnativenavigation.params.TitleBarButtonParams;
 import com.reactnativenavigation.utils.TypefaceSpan;
@@ -41,7 +47,55 @@ class TitleBarButton implements MenuItem.OnMenuItemClickListener {
         setIcon(item, index);
         setColor();
         setFont();
-        item.setOnMenuItemClickListener(this);
+        if (buttonParams.eventId.equals("search")) {
+            setSearchActionView(item);
+        }else{
+            item.setOnMenuItemClickListener(this);
+        }
+    }
+
+    private void setSearchActionView(@NonNull MenuItem item) {
+        SearchView searchView = new SearchView(actionMenuView.getContext());
+        searchView.setSubmitButtonEnabled(false);
+        final EditText editText = searchView.findViewById(android.support.v7.appcompat.R.id.search_src_text);
+        ImageView button = searchView.findViewById(android.support.v7.appcompat.R.id.search_button);
+        ImageView closeButton = searchView.findViewById(android.support.v7.appcompat.R.id.search_close_btn);
+        View v = searchView.findViewById(android.support.v7.appcompat.R.id.search_plate);
+
+        button.setColorFilter(buttonParams.color.getColor());
+        closeButton.setColorFilter(buttonParams.color.getColor());
+        v.setBackgroundColor(Color.TRANSPARENT);
+        editText.setTextColor(buttonParams.color.getColor());
+        editText.setHintTextColor(Color.LTGRAY);
+
+        editText.setHint("Search");
+        item.setActionView(searchView);
+        searchView.setOnSearchClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                NavigationApplication.instance.getEventEmitter()
+                    .sendNavigatorEvent(buttonParams.eventId, navigatorEventId);
+            }
+        });
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                WritableMap map = new WritableNativeMap();
+                map.putString("query", query);
+                NavigationApplication.instance.getEventEmitter()
+                    .sendNavigatorEvent("searchButtonPressed", navigatorEventId, map);
+                return true;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                WritableMap map = new WritableNativeMap();
+                map.putString("query", newText);
+                NavigationApplication.instance.getEventEmitter()
+                    .sendNavigatorEvent("searchQueryChanged", navigatorEventId, map);
+                return true;
+            }
+        });
     }
 
     private MenuItem createMenuItem(int index) {

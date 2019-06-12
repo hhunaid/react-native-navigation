@@ -19,7 +19,7 @@ const NSInteger BLUR_STATUS_TAG = 78264801;
 const NSInteger BLUR_NAVBAR_TAG = 78264802;
 const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
 
-@interface RCCViewController() <UIGestureRecognizerDelegate, UIViewControllerPreviewingDelegate>
+@interface RCCViewController() <UIGestureRecognizerDelegate, UIViewControllerPreviewingDelegate, UISearchBarDelegate>
 @property (nonatomic) BOOL _hidesBottomBarWhenPushed;
 @property (nonatomic) BOOL _statusBarHideWithNavBar;
 @property (nonatomic) BOOL _statusBarHidden;
@@ -214,6 +214,22 @@ const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
              {
                  @"type": @"ScreenChangedEvent",
                  @"id": eventName
+             }];
+        }
+    }
+}
+
+- (void)sendSearchChangedEvent:(NSString *)query {
+    if ([self.view isKindOfClass:[RCTRootView class]]) {
+        RCTRootView *rootView = (RCTRootView *)self.view;
+        
+        if (rootView.appProperties && rootView.appProperties[@"navigatorEventID"]) {
+            
+            [[[RCCManager sharedInstance] getBridge].eventDispatcher sendAppEventWithName:rootView.appProperties[@"navigatorEventID"] body:@
+             {
+                 @"type": @"ScreenChangedEvent",
+                 @"id": @"searchQueryChanged",
+                 @"query": query
              }];
         }
     }
@@ -426,7 +442,7 @@ const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
     if (finalColorScheme && [finalColorScheme isEqualToString:@"light"]) {
         
         if (!statusBarTextColorSchemeSingleScreen) {
-            viewController.navigationController.navigationBar.barStyle = UIBarStyleBlack;
+        viewController.navigationController.navigationBar.barStyle = UIBarStyleBlack;
         }
         
         self._statusBarTextColorSchemeLight = true;
@@ -460,6 +476,23 @@ const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
     BOOL navBarHiddenBool = navBarHidden ? [navBarHidden boolValue] : NO;
     if (viewController.navigationController.navigationBarHidden != navBarHiddenBool) {
         [viewController.navigationController setNavigationBarHidden:navBarHiddenBool animated:YES];
+    }
+    
+    if (@available(iOS 11.0, *)) {
+        NSNumber *searchBarVisible = self.navigatorStyle[@"searchBarVisible"];
+        BOOL searchBarVisibleBool = searchBarVisible ? [searchBarVisible boolValue] : NO;
+        if (searchBarVisibleBool && viewController.navigationItem.searchController == nil) {
+            UISearchController *search = [[UISearchController alloc] initWithSearchResultsController:nil];
+            search.dimsBackgroundDuringPresentation = NO;
+            if ([self conformsToProtocol:@protocol(UISearchResultsUpdating)]) {
+                [search setSearchResultsUpdater:((UIViewController <UISearchResultsUpdating> *) self)];
+            }
+            search.searchBar.delegate = (id<UISearchBarDelegate>)viewController;
+            search.searchBar.tintColor = [UIColor whiteColor];
+            search.hidesNavigationBarDuringPresentation = YES;
+            viewController.navigationItem.searchController = search;
+            viewController.definesPresentationContext = YES;
+        }
     }
     
     NSNumber *navBarHideOnScroll = self.navigatorStyle[@"navBarHideOnScroll"];
@@ -895,6 +928,12 @@ const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
         }
     }
     return actions;
+}
+
+#pragma mark - UISearchBarDelegate
+
+- (void)searchBar:(UISearchBar *)searchBar textDidChange:(NSString *)searchText {
+    [self sendSearchChangedEvent:searchText];
 }
 
 @end
